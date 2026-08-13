@@ -1,0 +1,85 @@
+{
+  "expo": {
+    "name": "Tindaryo",
+    "slug": "tindaryo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/tindaryo-icon.png",
+    "scheme": "tindaryo",
+    "description": "Offline inventory, sales, and utang tracking for sari-sari stores.",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "icon": "./assets/images/tindaryo-icon.png",
+      "bundleIdentifier": "com.roden.tindaryo",
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B765E",
+        "foregroundImage": "./assets/images/tindaryo-adaptive-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.roden.tindaryo",
+      "versionCode": 1
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/tindaryo-icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "headers": {
+            "Cross-Origin-Embedder-Policy": "credentialless",
+            "Cross-Origin-Opener-Policy": "same-origin"
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B765E",
+          "image": "./assets/images/tindaryo-adaptive-foreground.png",
+          "imageWidth": 120
+        }
+      ],
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Tindaryo to scan product barcodes",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow Tindaryo to unlock your private store records."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Tindaryo to unlock your private store records."
+        }
+      ],
+      "expo-localization",
+      [
+        "expo-notifications",
+        {
+          "color": "#0B765E",
+          "defaultChannel": "store-alerts"
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
