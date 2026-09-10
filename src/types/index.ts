@@ -38,8 +38,58 @@ export type NotificationPreferences = {
   lowStock: boolean;
   expiry: boolean;
   overdue: boolean;
+  busyForecast: boolean;
+  quietForecast: boolean;
   hour: number;
   minute: number;
+};
+
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export type StoreDayHours = {
+  day: Weekday;
+  enabled: boolean;
+  opensAt: string;
+  closesAt: string;
+};
+
+export type StoreHours = {
+  version: 1;
+  configured: boolean;
+  days: StoreDayHours[];
+};
+
+export type StoreStatus = {
+  configured: boolean;
+  isOpen: boolean;
+  overnight: boolean;
+  nextChange: Date | null;
+  nextChangeKind: 'opens' | 'closes' | null;
+};
+
+export type TrafficRawSlot = {
+  weekday: Weekday;
+  hour: number;
+  transactions: number;
+  revenue: number;
+};
+
+export type TrafficLevel = 'none' | 'quiet' | 'normal' | 'busy';
+
+export type TrafficHour = TrafficRawSlot & {
+  averageTransactions: number;
+  level: TrafficLevel;
+};
+
+export type TrafficReport = {
+  periodDays: number;
+  weeksObserved: number;
+  totalTransactions: number;
+  activeDays: number;
+  confidence: 'learning' | 'early' | 'reliable';
+  slots: TrafficHour[];
+  busiest: TrafficHour[];
+  quietest: TrafficHour[];
 };
 
 export type NotificationSummary = {

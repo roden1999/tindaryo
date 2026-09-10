@@ -1,6 +1,7 @@
 import { type Href, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/app-icon';
 import { Button, Card, Field, Page } from '@/components/ui';
@@ -16,10 +17,11 @@ import { errorMessage } from '@/utils/format';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { preference, setLanguage, t } = useI18n();
   const [fdata, setData] = useState({
     storeName: '', pin: '', confirmPin: '', hasPin: false, biometricsAvailable: false, biometricUnlock: false, loading: true, saving: false, action: '', importPreview: null as ProductImportPreview | null,
-    notificationPreferences: { enabled: false, lowStock: true, expiry: true, overdue: true, hour: 8, minute: 0 } as NotificationPreferences,
+    notificationPreferences: { enabled: false, lowStock: true, expiry: true, overdue: true, busyForecast: false, quietForecast: false, hour: 8, minute: 0 } as NotificationPreferences,
     notificationPermission: 'undetermined' as 'granted' | 'denied' | 'undetermined' | 'unavailable', lastBackupAt: null as string | null, error: '',
   });
 
@@ -125,7 +127,7 @@ export default function SettingsScreen() {
     } catch (error) { setData((current) => ({ ...current, action: '', error: errorMessage(error) })); }
   };
 
-  const toggleReminderKind = async (key: 'lowStock' | 'expiry' | 'overdue', enabled: boolean) => {
+  const toggleReminderKind = async (key: 'lowStock' | 'expiry' | 'overdue' | 'busyForecast' | 'quietForecast', enabled: boolean) => {
     const notificationPreferences = { ...fdata.notificationPreferences, [key]: enabled };
     setData((current) => ({ ...current, notificationPreferences, action: 'notifications', error: '' }));
     try { await saveNotificationPreferences(notificationPreferences); setData((current) => ({ ...current, action: '' })); }
@@ -182,12 +184,20 @@ export default function SettingsScreen() {
       </Card>
 
       <Card style={styles.formCard}>
+        <View style={styles.cardHeading}><View style={styles.iconBox}><AppIcon name="time-outline" color={colors.primary} /></View><View style={styles.headingCopy}><Text style={styles.title}>{t('weeklyStoreHours')}</Text><Text style={styles.caption}>{t('weeklyStoreHoursSettingsCaption')}</Text></View></View>
+        <Button title={t('manageStoreHours')} variant="secondary" icon={<AppIcon name="calendar-outline" color={colors.primary} />} onPress={() => router.push('/store-hours' as Href)} />
+        <Button title={t('viewSalesTraffic')} variant="ghost" icon={<AppIcon name="bar-chart-outline" color={colors.primary} />} onPress={() => router.push('/reports/traffic' as Href)} />
+      </Card>
+
+      <Card style={styles.formCard}>
         <View style={styles.cardHeading}><View style={styles.iconBox}><AppIcon name="notifications-outline" color={colors.primary} /></View><View style={styles.headingCopy}><Text style={styles.title}>{t('reminders')}</Text><Text style={styles.caption}>{t('remindersCaption')}</Text></View><Switch value={fdata.notificationPreferences.enabled} disabled={fdata.notificationPermission === 'unavailable' || fdata.action === 'notifications'} onValueChange={toggleReminders} trackColor={{ false: colors.border, true: colors.primary }} /></View>
         <Text style={styles.infoText}>{fdata.notificationPermission === 'unavailable' ? t('notificationsUnavailable') : fdata.notificationPermission === 'denied' ? t('notificationsDenied') : t('remindersInfo')}</Text>
         <View style={styles.reminderOptions}>
           <ReminderToggle label={t('lowStockAlerts')} value={fdata.notificationPreferences.lowStock} disabled={!fdata.notificationPreferences.enabled || fdata.action === 'notifications'} onChange={(value) => toggleReminderKind('lowStock', value)} />
           <ReminderToggle label={t('expiryAlerts')} value={fdata.notificationPreferences.expiry} disabled={!fdata.notificationPreferences.enabled || fdata.action === 'notifications'} onChange={(value) => toggleReminderKind('expiry', value)} />
           <ReminderToggle label={t('overdueAlerts')} value={fdata.notificationPreferences.overdue} disabled={!fdata.notificationPreferences.enabled || fdata.action === 'notifications'} onChange={(value) => toggleReminderKind('overdue', value)} />
+          <ReminderToggle label={t('busyForecastAlerts')} value={fdata.notificationPreferences.busyForecast} disabled={!fdata.notificationPreferences.enabled || fdata.action === 'notifications'} onChange={(value) => toggleReminderKind('busyForecast', value)} />
+          <ReminderToggle label={t('quietForecastAlerts')} value={fdata.notificationPreferences.quietForecast} disabled={!fdata.notificationPreferences.enabled || fdata.action === 'notifications'} onChange={(value) => toggleReminderKind('quietForecast', value)} />
         </View>
         {fdata.notificationPreferences.enabled ? <><Button title={t('refreshReminders')} variant="secondary" loading={fdata.action === 'refresh-reminders'} onPress={refreshReminders} /><Button title={t('testReminder')} variant="ghost" loading={fdata.action === 'test-reminder'} onPress={testReminder} /></> : null}
       </Card>
@@ -221,7 +231,7 @@ export default function SettingsScreen() {
 
       <Modal visible={Boolean(fdata.importPreview)} transparent animationType="slide" onRequestClose={() => setData((current) => ({ ...current, importPreview: null }))}>
         <Pressable style={styles.backdrop} onPress={() => setData((current) => ({ ...current, importPreview: null }))} />
-        <View style={styles.importSheet}>
+        <View style={[styles.importSheet, { paddingBottom: Math.max(insets.bottom, 20) + 8 }]}>
           <View style={styles.importHeader}><View style={styles.headingCopy}><Text style={styles.sheetTitle}>Review product import</Text><Text numberOfLines={1} style={styles.caption}>{fdata.importPreview?.fileName}</Text></View><Pressable accessibilityLabel="Close import preview" style={styles.closeButton} onPress={() => setData((current) => ({ ...current, importPreview: null }))}><AppIcon name="close" color={colors.text} /></Pressable></View>
           <View style={styles.importCounts}><View style={styles.countBox}><Text style={styles.validCount}>{fdata.importPreview?.validCount ?? 0}</Text><Text style={styles.countLabel}>READY</Text></View><View style={[styles.countBox, styles.errorCountBox]}><Text style={styles.errorCount}>{fdata.importPreview?.errorCount ?? 0}</Text><Text style={styles.countLabel}>NEEDS FIXING</Text></View></View>
           <Text style={styles.infoText}>Only rows marked Ready will be added. No existing product will be overwritten.</Text>

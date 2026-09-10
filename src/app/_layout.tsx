@@ -1,7 +1,8 @@
-import { Stack } from 'expo-router';
+import { isRunningInExpoGo } from 'expo';
+import { type Href, router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { LanguageProvider } from '@/i18n';
@@ -17,6 +18,24 @@ function RootNavigator() {
     refreshReminders();
     const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') refreshReminders(); });
     return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || isRunningInExpoGo()) return;
+    let active = true;
+    let remove: (() => void) | undefined;
+    const openNotification = (notification: { request: { content: { data?: Record<string, unknown> } } }) => {
+      const url = notification.request.content.data?.url;
+      if (typeof url === 'string' && url.startsWith('/')) router.push(url as Href);
+    };
+    void import('expo-notifications').then((Notifications) => {
+      if (!active) return;
+      const response = Notifications.getLastNotificationResponse();
+      if (response?.notification) openNotification(response.notification);
+      const subscription = Notifications.addNotificationResponseReceivedListener((next) => openNotification(next.notification));
+      remove = () => subscription.remove();
+    }).catch(() => undefined);
+    return () => { active = false; remove?.(); };
   }, []);
 
   return (

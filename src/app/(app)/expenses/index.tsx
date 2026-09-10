@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   expenseMeta: { color: colors.muted, fontSize: 11 },
   expenseAmount: { color: colors.danger, fontWeight: '900' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: colors.surface, padding: 20, gap: 13, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
+  sheet: { backgroundColor: colors.surface, padding: 20, paddingBottom: 56, gap: 13, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
   sheetTitle: { color: colors.text, fontSize: 23, fontWeight: '900' },
   caption: { color: colors.muted, lineHeight: 19 },
   inputLabel: { color: colors.text, fontWeight: '700', fontSize: 14 },

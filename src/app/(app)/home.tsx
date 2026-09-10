@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,8 +9,10 @@ import { Card, ScreenState, SectionTitle } from '@/components/ui';
 import { colors, shadows } from '@/constants/theme';
 import { store } from '@/database/store';
 import { useI18n } from '@/i18n';
-import type { Dashboard } from '@/types';
+import { getStoreHours } from '@/services/store-hours';
+import type { Dashboard, StoreStatus } from '@/types';
 import { errorMessage, peso } from '@/utils/format';
+import { getStoreStatus } from '@/utils/store-hours';
 
 const emptyDashboard: Dashboard = { todayRevenue: 0, todayProfit: 0, todaySaleCount: 0, lowStockCount: 0, totalUtang: 0, todayExpenses: 0, expiringCount: 0 };
 
@@ -20,15 +22,17 @@ const management = [
   { label: 'Profit / Loss', description: 'Understand earnings', icon: 'analytics-outline' as const, color: '#D17A22', background: '#FFF0DF', route: '/reports/profit' as const },
   { label: 'Smart Restock', description: 'Know what to buy', icon: 'trending-up-outline' as const, color: '#0B765E', background: '#DFF4EC', route: '/restock' as const },
   { label: 'Expenses & Cash', description: 'Daily cashflow', icon: 'wallet-outline' as const, color: '#B44B43', background: '#FCEBE8', route: '/expenses' as const },
+  { label: 'Sales traffic', description: 'Busy and quiet hours', icon: 'bar-chart-outline' as const, color: '#0B765E', background: '#DFF4EC', route: '/reports/traffic' as const },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { formatLongDate, t, tr } = useI18n();
+  const { formatLongDate, locale, t, tr } = useI18n();
   const [view, setView] = useState({
     dashboard: emptyDashboard,
     storeName: 'My Store',
     lastBackupAt: null as string | null,
+    storeStatus: { configured: false, isOpen: false, overnight: false, nextChange: null, nextChangeKind: null } as StoreStatus,
     loading: true,
     refreshing: false,
     error: '',
@@ -37,8 +41,8 @@ export default function HomeScreen() {
   const load = useCallback(async (refreshing = false) => {
     setView((current) => ({ ...current, loading: !refreshing, refreshing, error: '' }));
     try {
-      const [dashboard, profile, lastBackupAt] = await Promise.all([store.dashboard(), store.getStoreProfile(), store.getSetting('last_backup_at')]);
-      setView((current) => ({ ...current, dashboard, storeName: profile.storeName, lastBackupAt, loading: false, refreshing: false }));
+      const [dashboard, profile, lastBackupAt, hours] = await Promise.all([store.dashboard(), store.getStoreProfile(), store.getSetting('last_backup_at'), getStoreHours()]);
+      setView((current) => ({ ...current, dashboard, storeName: profile.storeName, lastBackupAt, storeStatus: getStoreStatus(hours), loading: false, refreshing: false }));
     } catch (error) {
       setView((current) => ({ ...current, loading: false, refreshing: false, error: errorMessage(error) }));
     }
@@ -51,6 +55,7 @@ export default function HomeScreen() {
   const positive = view.dashboard.todayProfit >= 0;
   const backupAge = view.lastBackupAt ? Date.now() - new Date(view.lastBackupAt).getTime() : Number.POSITIVE_INFINITY;
   const backupIsDue = !Number.isFinite(backupAge) || backupAge > 7 * 86400000;
+  const nextChange = view.storeStatus.nextChange?.toLocaleString(locale, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -64,6 +69,12 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.storeRow}><View><Text style={styles.eyebrow}>{t('yourStore')}</Text><Text style={styles.storeName}>{view.storeName}</Text></View><View style={styles.offlinePill}><View style={styles.offlineDot} /><Text style={styles.offlineText}>{t('offlineReady')}</Text></View></View>
+
+        <Pressable onPress={() => router.push('/store-hours' as Href)} style={[styles.hoursStatus, view.storeStatus.isOpen ? styles.hoursOpen : styles.hoursClosed]}>
+          <View style={[styles.hoursIcon, view.storeStatus.isOpen ? styles.hoursIconOpen : styles.hoursIconClosed]}><AppIcon name={view.storeStatus.isOpen ? 'storefront-outline' : 'moon-outline'} color={view.storeStatus.isOpen ? colors.success : colors.warning} /></View>
+          <View style={styles.newSaleCopy}><Text style={styles.hoursTitle}>{!view.storeStatus.configured ? t('setStoreHours') : view.storeStatus.isOpen ? t('storeOpenNow') : t('storeClosedNow')}</Text><Text style={styles.hoursCaption}>{!view.storeStatus.configured ? t('setStoreHoursCaption') : nextChange ? t(view.storeStatus.nextChangeKind === 'closes' ? 'closesAtStatus' : 'opensAtStatus', { time: nextChange }) : t('noUpcomingHours')}</Text></View>
+          <AppIcon name="chevron-forward" color={colors.muted} />
+        </Pressable>
 
         {view.error ? <Card style={styles.errorCard}><AppIcon name="alert-circle-outline" color={colors.warning} /><Text style={styles.errorText}>{t('databaseRetry')}</Text></Card> : null}
         {backupIsDue ? <Pressable onPress={() => router.push('/settings')} style={styles.backupReminder}><AppIcon name="cloud-upload-outline" color={colors.warning} /><View style={styles.newSaleCopy}><Text style={styles.backupReminderTitle}>{t('backupReminder')}</Text><Text style={styles.backupReminderText}>{t('backupDue')}</Text></View><AppIcon name="chevron-forward" color={colors.warning} /></Pressable> : null}
@@ -99,7 +110,7 @@ export default function HomeScreen() {
         <SectionTitle>{t('manageStore')}</SectionTitle>
         <View style={styles.managementGrid}>
           {management.map((item) => (
-            <Pressable key={item.label} onPress={() => router.push(item.route)} style={({ pressed }) => [styles.managementCard, pressed && styles.pressed]}>
+            <Pressable key={item.label} onPress={() => router.push(item.route as Href)} style={({ pressed }) => [styles.managementCard, pressed && styles.pressed]}>
               <View style={[styles.managementIcon, { backgroundColor: item.background }]}><AppIcon name={item.icon} color={item.color} size={24} /></View>
               <Text style={styles.managementLabel}>{tr(item.label)}</Text>
               <Text style={styles.managementDescription}>{tr(item.description)}</Text>
@@ -130,6 +141,14 @@ const styles = StyleSheet.create({
   offlinePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primarySoft, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 99 },
   offlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
   offlineText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
+  hoursStatus: { flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1, borderRadius: 17, padding: 12, backgroundColor: colors.surface },
+  hoursOpen: { borderColor: colors.successSoft },
+  hoursClosed: { borderColor: colors.warningSoft },
+  hoursIcon: { width: 41, height: 41, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  hoursIconOpen: { backgroundColor: colors.successSoft },
+  hoursIconClosed: { backgroundColor: colors.warningSoft },
+  hoursTitle: { color: colors.text, fontSize: 14, fontWeight: '900' },
+  hoursCaption: { color: colors.muted, fontSize: 10, marginTop: 3 },
   errorCard: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12, backgroundColor: colors.warningSoft },
   errorText: { flex: 1, color: colors.warning, fontWeight: '700', fontSize: 12 },
   backupReminder: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13, borderRadius: 16, borderWidth: 1, borderColor: colors.warningSoft, backgroundColor: colors.warningSoft },

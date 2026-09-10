@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tindaryo",
     "slug": "tindaryo",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/tindaryo-icon.png",
     "scheme": "tindaryo",
@@ -11,7 +11,7 @@
     "ios": {
       "icon": "./assets/images/tindaryo-icon.png",
       "bundleIdentifier": "com.roden.tindaryo",
-      "buildNumber": "1"
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +20,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.roden.tindaryo",
-      "versionCode": 1
+      "versionCode": 2
     },
     "web": {
       "output": "static",

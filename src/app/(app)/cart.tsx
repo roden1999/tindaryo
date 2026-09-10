@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/app-icon';
 import { BarcodeScanner } from '@/components/barcode-scanner';
@@ -10,11 +10,13 @@ import { Button, Card, Field, ScreenState } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import { store } from '@/database/store';
 import { useI18n } from '@/i18n';
+import { syncNotificationSchedule } from '@/services/notifications';
 import type { CartLine, Customer, PaymentMethod, Product } from '@/types';
 import { errorMessage, peso } from '@/utils/format';
 
 export default function CartScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t } = useI18n();
   const [view, setView] = useState({
     products: [] as Product[],
@@ -29,6 +31,7 @@ export default function CartScreen() {
     scannedProduct: null as Product | null,
     scannedQuantity: '1',
     customerOpen: false,
+    customerSearch: '',
     paymentOpen: false,
     cashReceived: '',
     paymentMode: 'cash' as PaymentMethod | 'split',
@@ -110,6 +113,7 @@ export default function CartScreen() {
         : mode === 'partial'
           ? await store.checkoutPartial(cart as CartLine[], customerId!, payments, view.dueAt || null)
           : await store.addProductDebt(customerId!, cart as CartLine[], view.dueAt || null);
+      void syncNotificationSchedule().catch(() => undefined);
       setView((current) => ({ ...current, paymentOpen: false }));
       Alert.alert(mode === 'paid' ? 'Sale complete' : mode === 'partial' ? t('partialSaleRecorded') : 'Utang recorded', response.message, [{ text: 'Done', onPress: () => router.replace('/home') }]);
     } catch (error) {
@@ -130,6 +134,8 @@ export default function CartScreen() {
   const partialAmount = Number(view.partialAmount || 0);
   const partialReady = partialAmount > 0 && partialAmount < total;
   const partialPayment = [{ method: view.partialMethod, amount: partialAmount }];
+  const customerQuery = view.customerSearch.trim().toLowerCase();
+  const filteredCustomers = view.customers.filter((customer) => !customerQuery || customer.name.toLowerCase().includes(customerQuery));
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.searchRow}><View style={styles.searchWrap}><AppIcon name="search-outline" size={19} color={colors.muted} /><TextInput style={styles.search} placeholder={t('searchProducts')} placeholderTextColor={colors.muted} value={view.search} onChangeText={(search) => setView((current) => ({ ...current, search }))} /></View><Pressable style={styles.scan} onPress={() => setView((current) => ({ ...current, scannerOpen: true }))}><AppIcon name="barcode-outline" color={colors.primary} /><Text style={styles.scanText}>{t('scan')}</Text></Pressable></View>
@@ -148,12 +154,12 @@ export default function CartScreen() {
       </ScrollView>
       <View style={styles.checkout}>
         <View style={styles.totalRow}><Text style={styles.count}>{count} item{count === 1 ? '' : 's'}</Text><Text style={styles.total}>{peso(total)}</Text></View>
-        <View style={styles.checkoutButtons}><View style={styles.checkoutThird}><Button title={t('utang')} variant="secondary" disabled={!cart.length} onPress={() => setView((current) => ({ ...current, customerOpen: true, utangMode: 'full', error: '' }))} /></View><View style={styles.checkoutThird}><Button title={t('partial')} variant="secondary" disabled={!cart.length} onPress={() => setView((current) => ({ ...current, customerOpen: true, utangMode: 'partial', partialAmount: (total / 2).toFixed(2), partialMethod: 'cash', error: '' }))} /></View><View style={styles.checkoutThird}><Button title={t('paid')} disabled={!cart.length} onPress={() => setView((current) => ({ ...current, paymentOpen: true, paymentMode: 'cash', cashReceived: total.toFixed(2), cashPart: total.toFixed(2), gcashPart: '', mayaPart: '', error: '' }))} /></View></View>
+        <View style={styles.checkoutButtons}><View style={styles.checkoutThird}><Button title={t('utang')} variant="secondary" disabled={!cart.length} onPress={() => setView((current) => ({ ...current, customerOpen: true, customerSearch: '', utangMode: 'full', error: '' }))} /></View><View style={styles.checkoutThird}><Button title={t('partial')} variant="secondary" disabled={!cart.length} onPress={() => setView((current) => ({ ...current, customerOpen: true, customerSearch: '', utangMode: 'partial', partialAmount: (total / 2).toFixed(2), partialMethod: 'cash', error: '' }))} /></View><View style={styles.checkoutThird}><Button title={t('paid')} disabled={!cart.length} onPress={() => setView((current) => ({ ...current, paymentOpen: true, paymentMode: 'cash', cashReceived: total.toFixed(2), cashPart: total.toFixed(2), gcashPart: '', mayaPart: '', error: '' }))} /></View></View>
       </View>
 
       <Modal visible={view.paymentOpen} transparent animationType="slide" onRequestClose={() => setView((current) => ({ ...current, paymentOpen: false }))}>
         <Pressable style={styles.backdrop} onPress={() => setView((current) => ({ ...current, paymentOpen: false }))} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) + 8 }]}>
           <View style={styles.paymentHeader}><View style={styles.paymentIcon}><AppIcon name="cash-outline" color={colors.primary} size={26} /></View><View><Text style={styles.sheetTitle}>{t('cashPayment')}</Text><Text style={styles.sheetCaption}>{t('cashReceived')}</Text></View></View>
           <View style={styles.amountDue}><Text style={styles.amountDueLabel}>{t('amountDue')}</Text><Text style={styles.amountDueValue}>{peso(total)}</Text></View>
           <View style={styles.paymentModes}>{(['cash', 'gcash', 'maya', 'split'] as const).map((method) => <Pressable key={method} onPress={() => setView((current) => ({ ...current, paymentMode: method }))} style={[styles.paymentMode, view.paymentMode === method && styles.paymentModeActive]}><Text style={[styles.paymentModeText, view.paymentMode === method && styles.paymentModeTextActive]}>{method === 'gcash' ? 'GCash' : method === 'maya' ? 'Maya' : method === 'split' ? 'Split' : 'Cash'}</Text></Pressable>)}</View>
@@ -167,11 +173,32 @@ export default function CartScreen() {
 
       <Modal visible={view.customerOpen} transparent animationType="slide" onRequestClose={() => setView((current) => ({ ...current, customerOpen: false }))}>
         <Pressable style={styles.backdrop} onPress={() => setView((current) => ({ ...current, customerOpen: false }))} />
-        <View style={[styles.sheet, styles.customerSheet]}><Text style={styles.sheetTitle}>{view.utangMode === 'partial' ? t('partialSale') : t('selectCustomer')}</Text><Text style={styles.sheetCaption}>{view.utangMode === 'partial' ? t('partialSaleHint') : t('chargeUtang')}</Text>{view.utangMode === 'partial' ? <><Field label={t('paidNow')} keyboardType="decimal-pad" placeholder="0.00" value={view.partialAmount} onChangeText={(partialAmountValue) => setView((current) => ({ ...current, partialAmount: partialAmountValue, error: '' }))} /><View style={styles.paymentModes}>{(['cash', 'gcash', 'maya'] as const).map((method) => <Pressable key={method} onPress={() => setView((current) => ({ ...current, partialMethod: method }))} style={[styles.paymentMode, view.partialMethod === method && styles.paymentModeActive]}><Text style={[styles.paymentModeText, view.partialMethod === method && styles.paymentModeTextActive]}>{method === 'gcash' ? 'GCash' : method === 'maya' ? 'Maya' : 'Cash'}</Text></Pressable>)}</View><View style={[styles.changeBox, !partialReady && styles.changeBoxPending]}><Text style={styles.changeLabel}>{t('remainingUtang')}</Text><Text style={[styles.changeValue, !partialReady && styles.changePending]}>{peso(Math.max(0, total - partialAmount))}</Text></View></> : null}<OptionalDateField label={t('dueDateOptional')} value={view.dueAt} onChange={(dueAt) => setView((current) => ({ ...current, dueAt, error: '' }))} />{view.error ? <Text style={styles.error}>{view.error}</Text> : null}<Text style={styles.customerPrompt}>{t('chooseCustomerToCharge')}</Text><ScrollView style={styles.customerList}>{view.customers.length === 0 ? <Text style={styles.emptyCustomers}>{t('noCustomersCart')}</Text> : view.customers.map((customer) => <Pressable key={customer.id} disabled={view.utangMode === 'partial' && !partialReady} style={[styles.customer, view.utangMode === 'partial' && !partialReady && styles.disabledCustomer]} onPress={() => complete(view.utangMode === 'partial' ? 'partial' : 'utang', customer.id, view.utangMode === 'partial' ? partialPayment : [])}><View><Text style={styles.customerName}>{customer.name}</Text><Text style={styles.customerBalance}>{t('outstandingBalance')} {peso(customer.balance)}</Text></View><Text style={styles.chevron}>›</Text></Pressable>)}</ScrollView><Button title={t('cancel')} variant="ghost" onPress={() => setView((current) => ({ ...current, customerOpen: false }))} /></View>
+        <View style={[styles.sheet, styles.customerSheet]}>
+          <View style={styles.customerHeader}>
+            <View style={styles.customerHeaderCopy}>
+              <Text style={styles.sheetTitle}>{view.utangMode === 'partial' ? t('partialSale') : t('selectCustomer')}</Text>
+              <Text style={styles.sheetCaption}>{view.utangMode === 'partial' ? t('partialSaleHint') : t('chargeUtang')}</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('cancel')} hitSlop={10} onPress={() => setView((current) => ({ ...current, customerOpen: false, customerSearch: '' }))} style={styles.customerClose}>
+              <AppIcon name="close" size={24} color={colors.primaryDark} />
+            </Pressable>
+          </View>
+          {view.utangMode === 'partial' ? <><Field label={t('paidNow')} keyboardType="decimal-pad" placeholder="0.00" value={view.partialAmount} onChangeText={(partialAmountValue) => setView((current) => ({ ...current, partialAmount: partialAmountValue, error: '' }))} /><View style={styles.paymentModes}>{(['cash', 'gcash', 'maya'] as const).map((method) => <Pressable key={method} onPress={() => setView((current) => ({ ...current, partialMethod: method }))} style={[styles.paymentMode, view.partialMethod === method && styles.paymentModeActive]}><Text style={[styles.paymentModeText, view.partialMethod === method && styles.paymentModeTextActive]}>{method === 'gcash' ? 'GCash' : method === 'maya' ? 'Maya' : 'Cash'}</Text></Pressable>)}</View><View style={[styles.changeBox, !partialReady && styles.changeBoxPending]}><Text style={styles.changeLabel}>{t('remainingUtang')}</Text><Text style={[styles.changeValue, !partialReady && styles.changePending]}>{peso(Math.max(0, total - partialAmount))}</Text></View></> : null}
+          <OptionalDateField label={t('dueDateOptional')} value={view.dueAt} onChange={(dueAt) => setView((current) => ({ ...current, dueAt, error: '' }))} />
+          {view.error ? <Text style={styles.error}>{view.error}</Text> : null}
+          <Text style={styles.customerPrompt}>{t('chooseCustomerToCharge')}</Text>
+          <View style={styles.customerSearch}>
+            <AppIcon name="search-outline" size={19} color={colors.muted} />
+            <TextInput autoCapitalize="words" autoCorrect={false} placeholder={t('searchCustomers')} placeholderTextColor={colors.muted} value={view.customerSearch} onChangeText={(customerSearch) => setView((current) => ({ ...current, customerSearch }))} style={styles.customerSearchInput} />
+          </View>
+          <ScrollView keyboardShouldPersistTaps="handled" style={styles.customerList}>
+            {view.customers.length === 0 ? <Text style={styles.emptyCustomers}>{t('noCustomersCart')}</Text> : filteredCustomers.length === 0 ? <Text style={styles.emptyCustomers}>{t('noCustomers')}</Text> : filteredCustomers.map((customer) => <Pressable key={customer.id} disabled={view.utangMode === 'partial' && !partialReady} style={[styles.customer, view.utangMode === 'partial' && !partialReady && styles.disabledCustomer]} onPress={() => complete(view.utangMode === 'partial' ? 'partial' : 'utang', customer.id, view.utangMode === 'partial' ? partialPayment : [])}><View><Text style={styles.customerName}>{customer.name}</Text><Text style={styles.customerBalance}>{t('outstandingBalance')} {peso(customer.balance)}</Text></View><Text style={styles.chevron}>›</Text></Pressable>)}
+          </ScrollView>
+        </View>
       </Modal>
       <Modal visible={Boolean(view.scannedProduct)} transparent animationType="slide" onRequestClose={() => setView((current) => ({ ...current, scannedProduct: null, error: '' }))}>
         <Pressable style={styles.backdrop} onPress={() => setView((current) => ({ ...current, scannedProduct: null, error: '' }))} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) + 8 }]}>
           <View style={styles.scanQuantityHeader}><View style={styles.paymentIcon}><AppIcon name="barcode-outline" color={colors.primary} size={26} /></View><View style={styles.scanQuantityCopy}><Text style={styles.sheetTitle}>{t('itemScanned')}</Text><Text style={styles.sheetCaption}>{view.scannedProduct?.productName}</Text></View></View>
           <View style={styles.scanSummary}><Text style={styles.scanSummaryText}>{peso(view.scannedProduct?.sellingPrice ?? 0)}</Text><Text style={styles.scanStock}>{t('availableStock')}: {view.scannedProduct?.stock ?? 0}</Text></View>
           <Field label={t('quantityToAdd')} keyboardType="number-pad" autoFocus selectTextOnFocus value={view.scannedQuantity} onChangeText={(scannedQuantity) => setView((current) => ({ ...current, scannedQuantity: scannedQuantity.replace(/\D/g, ''), error: '' }))} onSubmitEditing={addScannedQuantity} />
@@ -224,8 +251,13 @@ const styles = StyleSheet.create({
   sheetTitle: { color: colors.text, fontSize: 23, fontWeight: '900' },
   sheetCaption: { color: colors.muted, marginBottom: 6 },
   customerList: { flexGrow: 0 },
-  customerSheet: { maxHeight: '88%' },
+  customerSheet: { maxHeight: '88%', paddingBottom: 28 },
+  customerHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  customerHeaderCopy: { flex: 1 },
+  customerClose: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   customerPrompt: { color: colors.text, fontWeight: '900', marginTop: 2 },
+  customerSearch: { height: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background },
+  customerSearchInput: { flex: 1, height: 46, paddingHorizontal: 9, color: colors.text },
   disabledCustomer: { opacity: 0.4 },
   customer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
   customerName: { color: colors.text, fontSize: 16, fontWeight: '900' },

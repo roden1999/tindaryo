@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   writeOffButton: { alignSelf: 'flex-start', paddingVertical: 4, paddingRight: 8 },
   writeOffText: { color: colors.danger, fontSize: 12, fontWeight: '800' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { maxHeight: '83%', backgroundColor: colors.surface, padding: 20, gap: 13, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
+  sheet: { maxHeight: '83%', backgroundColor: colors.surface, padding: 20, paddingBottom: 56, gap: 13, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
   sheetTitle: { color: colors.text, fontSize: 23, fontWeight: '900' },
   sheetCaption: { color: colors.muted, marginTop: -8 },
   segment: { flexDirection: 'row', borderRadius: 14, backgroundColor: colors.background, padding: 4 },

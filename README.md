@@ -18,6 +18,8 @@ Tindaryo is a modern, offline-first inventory and point-of-sale app for Filipino
 - Local JSON backup and restore through the device file/share sheet
 - Optional local owner PIN with biometric unlock when the device supports it
 - Optional daily local reminders for low stock, upcoming expiry dates, and overdue utang
+- Per-day opening and closing hours, including closed days and overnight schedules
+- Eight-week on-device sales-traffic patterns with opt-in busy and quiet-hour forecasts
 - English, Filipino, and Cebuano interfaces, with automatic device-language selection and English fallback
 
 ## Technology
@@ -119,7 +121,9 @@ assets/images/  Tindaryo app icons and artwork
 
 Choose **Device language**, **English**, **Filipino**, or **Cebuano** in Settings. The choice is saved in SQLite and is included in full backups. Any untranslated future text safely falls back to English.
 
-Store reminders are optional and stay entirely on the device. When enabled, Tindaryo refreshes its daily schedule from the current SQLite records at startup, when the app becomes active, and after reminder settings change. The phone may deliver the reminder around 8:00 AM rather than at an exact second. Android and iPhone notification permission is requested only when the owner enables reminders.
+Store reminders are optional and stay entirely on the device. When enabled, Tindaryo refreshes its schedule from the current SQLite records at startup, when the app becomes active, after completed sales, and after reminder settings change. The phone may deliver a reminder near the scheduled time rather than at an exact second. Android and iPhone notification permission is requested only when the owner enables reminders.
+
+Busy and quiet forecasts use the latest eight weeks of completed, non-refunded sales during configured opening hours. They describe recorded buying activity, not the number of people who walked past the store. Forecast notifications remain off until the owner enables them, and do not start while there is too little sales history.
 
 ## Product CSV import
 

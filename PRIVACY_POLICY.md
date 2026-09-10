@@ -1,19 +1,19 @@
 # Tindaryo Privacy Policy
 
-Effective date: August 13, 2026
+Effective date: August 27, 2026
 
-Tindaryo is an offline inventory, sales, expense, and customer-utang tracker for sari-sari stores. This policy explains how the Tindaryo 1.0 mobile application handles information.
+Tindaryo is an offline inventory, sales, expense, and customer-utang tracker for sari-sari stores. This policy explains how the Tindaryo mobile application handles information.
 
 ## Information stored by the app
 
-Tindaryo stores the store name, products, barcodes, prices, stock quantities, sales, customer names, utang records, payments, expenses, preferences, and backup history in a local SQLite database on the user's device. Tindaryo does not require an account and does not operate a server that receives this store data.
+Tindaryo stores the store name, products, barcodes, prices, stock quantities, sales, customer names, utang records, payments, expenses, weekly store hours, preferences, and backup history in a local SQLite database on the user's device. Busy and quiet-hour patterns are calculated on the device from recorded sales and are not foot-traffic or location tracking. Tindaryo does not require an account and does not operate a server that receives this store data.
 
 The optional owner PIN and biometric-unlock preference are stored in device-protected secure storage. Biometric matching is performed by the device operating system. Tindaryo does not receive or store fingerprint or facial biometric data.
 
 ## Device permissions
 
 - Camera access is used only when the user opens the barcode scanner. Tindaryo does not save photos or video.
-- Notification access is used for optional low-stock, expiry, and overdue-utang reminders generated from local records.
+- Notification access is used for optional low-stock, expiry, overdue-utang, and sales-pattern reminders generated from local records.
 - File and sharing access is used only when the user chooses to create, save, restore, print, or share a backup, CSV export, or receipt PDF.
 
 ## Sharing and third parties

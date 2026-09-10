@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   zero: { color: colors.success },
   chevron: { color: colors.muted, fontSize: 27 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: colors.surface, padding: 22, gap: 14, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
+  sheet: { backgroundColor: colors.surface, padding: 22, paddingBottom: 56, gap: 14, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
   sheetTitle: { color: colors.text, fontSize: 23, fontWeight: '900' },
   sheetCaption: { color: colors.muted, marginTop: -8 },
   error: { color: colors.danger, fontWeight: '600' },

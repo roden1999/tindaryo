@@ -5,8 +5,8 @@ apply plugin: "com.facebook.react"
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
-def tindaryoVersionCode = (project.findProperty("tindaryoVersionCode") ?: "1").toString().toInteger()
-def tindaryoVersionName = (project.findProperty("tindaryoVersionName") ?: "1.0.0").toString()
+def tindaryoVersionCode = (project.findProperty("tindaryoVersionCode") ?: "2").toString().toInteger()
+def tindaryoVersionName = (project.findProperty("tindaryoVersionName") ?: "1.1.0").toString()
 
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))

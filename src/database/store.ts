@@ -16,6 +16,7 @@ import type {
   SaleItem,
   MutationResult,
   NotificationSummary,
+  TrafficRawSlot,
   UtangTransaction,
 } from '@/types';
 
@@ -222,6 +223,45 @@ export const store = {
       "SELECT COUNT(*) AS count FROM sales WHERE status = 'unpaid' AND due_at IS NOT NULL AND date(due_at) < date('now', 'localtime')",
     );
     return { lowStockCount: lowStock?.count ?? 0, expiringCount: expiring?.count ?? 0, overdueCount: overdue?.count ?? 0 };
+  },
+
+  trafficData: async (periodDays = 56) => {
+    const database = await getDatabase();
+    const safeDays = Number.isInteger(periodDays) ? Math.min(365, Math.max(7, periodDays)) : 56;
+    const offset = `-${safeDays - 1} days`;
+    const rows = await database.getAllAsync<{ weekday: number; hour: number; transactions: number; revenue: number }>(
+      `SELECT CAST(strftime('%w', s.created_at, 'localtime') AS INTEGER) AS weekday,
+              CAST(strftime('%H', s.created_at, 'localtime') AS INTEGER) AS hour,
+              COUNT(*) AS transactions,
+              COALESCE(SUM(s.total), 0) AS revenue
+       FROM sales s
+       WHERE date(s.created_at, 'localtime') >= date('now', 'localtime', ?)
+         AND date(s.created_at, 'localtime') <= date('now', 'localtime')
+         AND NOT EXISTS (SELECT 1 FROM voided_sales v WHERE v.sale_id = s.id)
+       GROUP BY weekday, hour
+       ORDER BY weekday, hour`,
+      offset,
+    );
+    const summary = await database.getFirstAsync<{ total_transactions: number; active_days: number }>(
+      `SELECT COUNT(*) AS total_transactions,
+              COUNT(DISTINCT date(s.created_at, 'localtime')) AS active_days
+       FROM sales s
+       WHERE date(s.created_at, 'localtime') >= date('now', 'localtime', ?)
+         AND date(s.created_at, 'localtime') <= date('now', 'localtime')
+         AND NOT EXISTS (SELECT 1 FROM voided_sales v WHERE v.sale_id = s.id)`,
+      offset,
+    );
+    return {
+      periodDays: safeDays,
+      totalTransactions: summary?.total_transactions ?? 0,
+      activeDays: summary?.active_days ?? 0,
+      slots: rows.map((row): TrafficRawSlot => ({
+        weekday: row.weekday as TrafficRawSlot['weekday'],
+        hour: row.hour,
+        transactions: row.transactions,
+        revenue: row.revenue,
+      })),
+    };
   },
 
   products: async () => {
