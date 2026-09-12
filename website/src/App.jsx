@@ -5,7 +5,7 @@ const assets = {
   traffic: `${import.meta.env.BASE_URL}screenshot-traffic.png`,
 };
 
-const playStoreUrl = import.meta.env.VITE_PLAY_STORE_URL?.trim();
+const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.roden.tindaryo';
 
 const features = [
   ['01', 'Mabilis na bentahan', 'Search or scan products, change quantities, and accept Cash, GCash, Maya, split, or utang payments.'],
@@ -18,7 +18,7 @@ const faqs = [
   ['Kailangan ba ng internet?', 'Hindi para sa araw-araw na paggamit. Inventory, sales, utang, reports, and reminders work from data stored on your phone.'],
   ['Kailangan ba ng account?', 'No. Tindaryo is designed for one store owner and does not require an online login or monthly account.'],
   ['Saan naka-save ang records?', 'Your records are stored in a private SQLite database on your device. Create regular backups before changing phones or uninstalling the app.'],
-  ['May bayad ba?', 'Pricing will be announced when Tindaryo becomes publicly available on Google Play.'],
+  ['Saan ko mada-download?', 'Tindaryo is now available on Google Play. Use any Google Play button on this page to open the official app listing.'],
 ];
 
 function Brand({ compact = false }) {
@@ -32,10 +32,8 @@ function Brand({ compact = false }) {
 
 function PlayStoreButton({ compact = false }) {
   const className = `play-button ${compact ? 'play-button--compact' : ''}`;
-  const content = <><span className="play-button__mark">▶</span><span><small>{playStoreUrl ? 'GET IT ON' : 'COMING SOON ON'}</small>Google Play</span></>;
-  return playStoreUrl
-    ? <a className={className} href={playStoreUrl} target="_blank" rel="noreferrer">{content}</a>
-    : <span className={`${className} play-button--disabled`} aria-disabled="true">{content}</span>;
+  const content = <><span className="play-button__mark">▶</span><span><small>GET IT ON</small>Google Play</span></>;
+  return <a className={className} href={playStoreUrl} target="_blank" rel="noreferrer">{content}</a>;
 }
 
 function Header({ simple = false }) {
@@ -126,7 +124,7 @@ function HomePage() {
           <div className="faq-list">{faqs.map(([question, answer], index) => <details key={question} open={index === 0}><summary>{question}<span>+</span></summary><p>{answer}</p></details>)}</div>
         </section>
 
-        <section className="cta-section"><div className="shell cta-layout"><div><p className="eyebrow eyebrow--light"><span /> Tindaryo for Android</p><h2>Handa para sa bawat benta.</h2><p>Public release is coming to Google Play.</p></div><PlayStoreButton /></div></section>
+        <section className="cta-section"><div className="shell cta-layout"><div><p className="eyebrow eyebrow--light"><span /> Tindaryo for Android</p><h2>Handa para sa bawat benta.</h2><p>Available now on Google Play.</p></div><PlayStoreButton /></div></section>
       </main>
       <Footer />
     </>
